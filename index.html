@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dreamron Warehouse - Delivery Location Finder</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK (Compat Version) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            500: '#2563eb',
+                            600: '#1d4ed8',
+                            700: '#1e40af',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .btn-nav-mix {
+            background: linear-gradient(135deg, #15803d 0%, #334155 100%);
+            border: 1px solid #475569;
+            color: #ffffff;
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-nav-mix:hover {
+            background: linear-gradient(135deg, #16a34a 0%, #475569 100%);
+            border-color: #64748b;
+            box-shadow: 0 4px 14px 0 rgba(22, 163, 74, 0.25);
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 dark:bg-black dark:text-slate-100 min-h-screen pb-24 transition-colors duration-200">
+
+    <header class="sticky top-0 z-30 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-brand-600/30">
+                    <i class="fa-solid fa-truck-fast"></i>
+                </div>
+                <div>
+                    <h1 class="font-black text-base sm:text-lg leading-tight tracking-tight text-slate-900 dark:text-white">Dreamron Warehouse</h1>
+                    <p class="text-[11px] text-brand-600 dark:text-brand-400 font-semibold flex items-center gap-1.5">Develop By: Sakila Dilshan Perera</p>
+                    <p class="text-[11px] text-brand-600 dark:text-brand-400 font-semibold flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                        Delivery Finder - Harumi Holdings (PVT) LTD
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Header Actions -->
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <button onclick="toggleTheme()" id="themeToggleBtn" title="Toggle Light/Dark Theme" class="p-2.5 rounded-xl bg-slate-200 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-amber-600 dark:text-amber-400 hover:scale-105 transition">
+                    <i class="fa-solid fa-sun text-base" id="themeIcon"></i>
+                </button>
+                <button onclick="openEmployeeModal()" class="bg-slate-200 dark:bg-slate-900 hover:bg-slate-300 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-200 font-bold px-3 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-users text-brand-600 dark:text-brand-400"></i>
+                    <span class="hidden md:inline">Employee Details</span>
+                </button>
+                <button onclick="openAddRouteModal()" class="bg-slate-200 dark:bg-slate-900 hover:bg-slate-300 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-200 font-bold px-3 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-folder-plus text-brand-600 dark:text-brand-400"></i>
+                    <span class="hidden sm:inline">Add Route</span>
+                </button>
+                <button onclick="openAddModal()" class="bg-brand-600 hover:bg-brand-700 active:scale-95 transition text-white font-extrabold px-3.5 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 shadow-md">
+                    <i class="fa-solid fa-plus text-sm"></i>
+                    <span>Add Location</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 pt-5">
+        <!-- Stats Overview Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
+                <div>
+                    <p class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Locations</p>
+                    <p id="statTotal" class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">0</p>
+                </div>
+                <div class="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base border border-blue-200 dark:border-blue-800/40">
+                    <i class="fa-solid fa-location-dot"></i>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
+                <div>
+                    <p class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Active Routes</p>
+                    <p id="statRoutes" class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">0</p>
+                </div>
+                <div class="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-base border border-indigo-200 dark:border-indigo-800/40">
+                    <i class="fa-solid fa-route"></i>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
+                <div>
+                    <p class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Agencies</p>
+                    <p id="statAgencies" class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">0</p>
+                </div>
+                <div class="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center text-base border border-purple-200 dark:border-purple-800/40">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
+                <div>
+                    <p class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Direct Cust.</p>
+                    <p id="statDirect" class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">0</p>
+                </div>
+                <div class="w-9 h-9 rounded-xl bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 flex items-center justify-center text-base border border-teal-200 dark:border-teal-800/40">
+                    <i class="fa-solid fa-user-check"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Controls -->
+        <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-md mb-5 space-y-4">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass text-lg"></i>
+                </div>
+                <input type="text" id="searchInput" oninput="applyFilters()" 
+                    placeholder="Search customer, phone, route, coordinates (e.g. 6.84579, 79.92597)..." 
+                    class="w-full pl-11 pr-10 py-3 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white placeholder-slate-400 font-medium">
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="setCustomerTypeFilter('ALL')" id="typeBtn-ALL" class="type-btn py-2.5 px-3 rounded-xl font-bold text-xs text-center border transition flex items-center justify-center gap-1.5 bg-brand-600 text-white border-brand-500 shadow-sm">
+                    <i class="fa-solid fa-layer-group"></i> All Types
+                </button>
+                <button onclick="setCustomerTypeFilter('Agency')" id="typeBtn-Agency" class="type-btn py-2.5 px-3 rounded-xl font-bold text-xs text-center border transition flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-black text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-800">
+                    <i class="fa-solid fa-building"></i> Agency
+                </button>
+                <button onclick="setCustomerTypeFilter('Direct Customer')" id="typeBtn-Direct Customer" class="type-btn py-2.5 px-3 rounded-xl font-bold text-xs text-center border transition flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-black text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-800">
+                    <i class="fa-solid fa-user"></i> Direct
+                </button>
+            </div>
+
+            <div>
+                <div class="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-1" id="routeTabs"></div>
+            </div>
+        </section>
+
+        <div id="customerGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </main>
+
+    <!-- Firebase Realtime Database Logic -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "PASTE_YOUR_API_KEY_HERE",
+            authDomain: "dreamron-delivery-system.firebaseapp.com",
+            databaseURL: "https://dreamron-delivery-system-default-rtdb.firebaseio.com",
+            projectId: "dreamron-delivery-system",
+            storageBucket: "dreamron-delivery-system.appspot.com",
+            messagingSenderId: "247494110960",
+            appId: "PASTE_YOUR_APP_ID_HERE"
+        };
+
+        // Initialize Firebase App & Database
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
+        // Password Hash Guard (gps@4269)
+        const SECURE_HASH = "4f86d635cf36077c59368ca41315e9a4f4efad6385b0cb51ec12e8b093158c67";
+
+        async function verifyPasswordInput(inputPassword) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(inputPassword);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('') === SECURE_HASH;
+        }
+
+        // Synchronize changes live across all drivers
+        db.ref('delivery_system').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                console.log("Firebase sync successful:", data);
+            }
+        });
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                html.classList.add('light');
+            } else {
+                html.classList.remove('light');
+                html.classList.add('dark');
+            }
+        }
+    </script>
+</body>
+</html>
